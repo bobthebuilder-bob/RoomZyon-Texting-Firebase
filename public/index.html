@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>RoomZyon - Texting Edition</title>
+<meta name="description" content="RoomZyon Texting Edition. Secure, real-time browser chat.">
+
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/roomzyon_logo.png">
+
+<style>
+/* © Copyright RoomZyon 2026 */
+:root {
+  --bg: #05070a; --card: rgba(20, 25, 45, 0.7); --border: rgba(255, 255, 255, 0.08);
+  --accent: #6cf2c2; --text: #ffffff; --muted: #8a95b5; --error: #ff5e5e;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* Dölj Google Translate original-skräp helt */
+#google_translate_element, .skiptranslate, iframe.goog-te-banner-frame { display: none !important; }
+body { top: 0 !important; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 0%, #1a234a, #05070a); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+
+.custom-lang-selector { position: absolute; top: 25px; right: 25px; background: rgba(0, 0, 0, 0.4); color: #fff; border: 1px solid var(--border); padding: 10px 16px; border-radius: 12px; font-size: 14px; backdrop-filter: blur(10px); cursor: pointer; z-index: 1000; outline: none; }
+.card { background: var(--card); border: 1px solid var(--border); backdrop-filter: blur(20px); border-radius: 28px; padding: 40px; width: 90%; max-width: 400px; text-align: center; }
+.logo-text { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #007aff, #00c6ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+input, textarea { width: 100%; padding: 16px; margin-top: 12px; border-radius: 14px; border: 1px solid var(--border); background: rgba(0,0,0,0.4); color: #fff; outline: none; font-size: 16px; }
+button { width: 100%; padding: 16px; margin-top: 20px; border-radius: 14px; border: none; background: linear-gradient(135deg, #6cf2c2, #4bbcff); color: #05070a; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+button:disabled { opacity: 0.5; }
+
+#chatWrapper { display: none; flex-direction: column; height: 92vh; width: 95%; max-width: 1000px; background: var(--card); border: 1px solid var(--border); border-radius: 32px; overflow: hidden; }
+#chat { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 75%; padding: 16px 20px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 22px; align-self: flex-start; }
+.name { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; display: block; }
+
+#sendArea { padding: 25px; background: rgba(0,0,0,0.3); border-top: 1px solid var(--border); display: flex; gap: 12px; }
+.icon-btn { width: 58px; height: 58px; margin: 0; padding: 0; background: rgba(255,255,255,0.05); }
+.error-box { color: var(--error); font-size: 14px; margin-top: 15px; display: none; background: rgba(255, 94, 94, 0.1); padding: 10px; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<div id="google_translate_element"></div>
+<select class="custom-lang-selector notranslate" id="customLang" onchange="changeLanguage(this.value)"></select>
+
+<div id="roomDiv" class="card">
+  <div class="logo-text">RoomZyon</div>
+  <div style="font-size: 11px; letter-spacing: 3px; color: var(--muted); margin-bottom: 20px;">TEXTING EDITION</div>
+  <input id="displayName" placeholder="Name">
+  <input id="roomId" placeholder="Room ID">
+  <input id="roomPassword" type="password" placeholder="Password">
+  <button id="joinBtn" onclick="enterRoom()">
+    Start chatting
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+  </button>
+  <div id="roomError" class="error-box"></div>
+</div>
+
+<div id="chatWrapper">
+  <div id="chat" class="notranslate"></div>
+  <div id="sendArea">
+    <textarea id="message" placeholder="Type a message..."></textarea>
+    <button class="icon-btn" id="sendBtn" onclick="send()" style="background: var(--accent); color: #000;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+    <button onclick="location.reload()" style="width: auto; padding: 0 20px; background: transparent; color: #fff; border: 1px solid var(--border);">Leave</button>
+  </div>
+</div>
+
+<script>
+const languages = [
+  {code:'en',name:'English'},{code:'sv',name:'Svenska'},{code:'no',name:'Norsk'},{code:'da',name:'Dansk'},{code:'fi',name:'Suomi'},
+  {code:'es',name:'Español'},{code:'fr',name:'Français'},{code:'de',name:'Deutsch'},{code:'it',name:'Italiano'},{code:'pt',name:'Português'},
+  {code:'nl',name:'Nederlands'},{code:'pl',name:'Polski'},{code:'ru',name:'Русский'},{code:'tr',name:'Türkçe'},{code:'ar',name:'العربية'},
+  {code:'zh-CN',name:'中文'},{code:'ja',name:'日本語'},{code:'ko',name:'한국어'},{code:'hi',name:'हिन्दी'},{code:'el',name:'Ελληνικά'}
+];
+
+const selectEl = document.getElementById('customLang');
+languages.forEach(l => { const o = document.createElement('option'); o.value = l.code; o.textContent = l.name; selectEl.appendChild(o); });
+
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: languages.map(l=>l.code).join(',')}, 'google_translate_element');
+}
+function changeLanguage(v) {
+  const s = document.querySelector('.goog-te-combo');
+  if(s) { s.value = v; s.dispatchEvent(new Event('change')); }
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAUc_WUxD1338PpAUm1xeFZwSAC-S1_hHc",
+  authDomain: "roomzyon-texting-edition.firebaseapp.com",
+  projectId: "roomzyon-texting-edition",
+  storageBucket: "roomzyon-texting-edition.firebasestorage.app",
+  messagingSenderId: "246071097603",
+  appId: "1:246071097603:web:4b42f79af66c6ffd209136"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+let currentRoom = null;
+
+window.enterRoom = async () => {
+  const n = displayName.value.trim(), id = roomId.value.trim(), p = roomPassword.value;
+  const btn = document.getElementById('joinBtn'), err = document.getElementById('roomError');
+  if(!n || !id || !p) { err.innerText = "Please fill in all fields."; err.style.display = "block"; return; }
+  
+  btn.disabled = true; btn.innerText = "Connecting..."; err.style.display = "none";
+
+  try {
+    const ref = doc(db, "rooms", id);
+    const snap = await getDoc(ref);
+    if(!snap.exists()) { await setDoc(ref, { password: p }); }
+    else if(snap.data().password !== p) { 
+      btn.disabled = false; btn.innerText = "Start chatting"; 
+      err.innerText = "Incorrect password!"; err.style.display = "block"; return; 
+    }
+
+    currentRoom = id;
+    roomDiv.style.display = "none"; chatWrapper.style.display = "flex";
+    onSnapshot(query(collection(db, "rooms", id, "messages"), orderBy("time")), s => {
+      chat.innerHTML = "";
+      s.forEach(d => {
+        const m = d.data();
+        const div = document.createElement("div"); div.className = "msg";
+        div.innerHTML = \`<span class="name">\${m.name}</span>\${m.text}\`;
+        chat.appendChild(div);
+      });
+      chat.scrollTop = chat.scrollHeight;
+    });
+  } catch (e) { btn.disabled = false; btn.innerText = "Start chatting"; err.innerText = "Database error. Check your rules!"; err.style.display = "block"; }
+};
+
+window.send = async () => {
+  const t = message.value.trim(); if(!t) return;
+  await addDoc(collection(db, "rooms", currentRoom, "messages"), { name: displayName.value, text: t, time: serverTimestamp() });
+  message.value = "";
+};
+</script>
+</body>
+</html>
